@@ -1,5 +1,6 @@
 const http = require('http');
 const path = require('path');
+const fs = require('fs').promises;
 const { Command } = require('commander');
 
 const program = new Command();
@@ -11,6 +12,7 @@ program
 program.parse(process.argv);
 
 const options = program.opts();
+const cacheDir = path.resolve(options.cache);
 const host = options.host;
 const port = options.port;
 const cache = options.cache;
@@ -20,13 +22,23 @@ if (!host || !port || !cache) {
   process.exit(1);
 }
 
-const server = http.createServer((req, res) => {
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/plain');
-  res.end(`Сервер працює на ${host}:${port}. Кеш знаходиться в: ${path.resolve(cache)}\n`);
+const server = http.createServer(async (req, res) => {
+  const statusCode = req.url.slice(1);
+  const filePath = path.join(cacheDir, `${statusCode}.jpg`);
+
+  if (req.method === 'GET') {
+    try {
+      const fileData = await fs.promise.readFile(filePath);
+      res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+      res.end(fileData);
+    } catch (err) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Картинка не знайдена в кеші.\n');
+    }
+  }
 });
 
-server.listen(port, host, () => {
-  console.log(`Сервер запущено на ${host}:${port}`);
+server.listen(options.port, options.host, () => {
+  console.log(`Сервер запущено на http://${options.host}:${options.port}`);
 });
 
