@@ -28,17 +28,42 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'GET') {
     try {
-      const fileData = await fs.promise.readFile(filePath);
+      const fileData = await fs.readFile(filePath);
       res.writeHead(200, { 'Content-Type': 'image/jpeg' });
       res.end(fileData);
     } catch (err) {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       res.end('Картинка не знайдена в кеші.\n');
     }
+  } else if (req.method === 'PUT') {
+    let body = [];
+    req.on('data', chunk => body.push(chunk));
+    req.on('end', async () => {
+      const fileData = Buffer.concat(body);
+      try {
+        await fs.writeFile(filePath, fileData);
+        res.writeHead(201, { 'Content-Type': 'text/plain' });
+        res.end('Картинка збережена у кеш.\n');
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Не вдалося зберегти картинку.\n');
+      }
+    });
+  } else if (req.method === 'DELETE') {
+    try {
+      await fs.unlink(filePath);
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end('Картинка видалена з кешу.\n');
+    } catch (err) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Картинка не знайдена для видалення.\n');
+    }
+  } else {
+    res.writeHead(405, { 'Content-Type': 'text/plain' });
+    res.end('Метод не дозволено.\n');
   }
 });
 
 server.listen(options.port, options.host, () => {
   console.log(`Сервер запущено на http://${options.host}:${options.port}`);
 });
-
