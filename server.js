@@ -2,6 +2,7 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs').promises;
 const { Command } = require('commander');
+const superagent = require('superagent');
 
 const program = new Command();
 program
@@ -22,6 +23,15 @@ if (!host || !port || !cache) {
   process.exit(1);
 }
 
+async function fetchImageFromHttpCat(statusCode) {
+  try {
+    const response = await superagent.get(`https://http.cat/${statusCode}`);
+    return response.body;
+  } catch (err) {
+    throw new Error('Не вдалося отримати картинку з http.cat');
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   const statusCode = req.url.slice(1);
   const filePath = path.join(cacheDir, `${statusCode}.jpg`);
@@ -32,8 +42,15 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'image/jpeg' });
       res.end(fileData);
     } catch (err) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('Картинка не знайдена в кеші.\n');
+      try {
+        const imageData = await fetchImageFromHttpCat(statusCode);
+        await fs.writeFile(filePath, imageData);
+        res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+        res.end(imageData);
+      } catch (error) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Картинка не знайдена.\n');
+      }
     }
   } else if (req.method === 'PUT') {
     let body = [];
