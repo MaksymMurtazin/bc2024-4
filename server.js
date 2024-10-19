@@ -49,7 +49,7 @@ const server = http.createServer(async (req, res) => {
         res.end(imageData);
       } catch (error) {
         res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('(Not Found');
+        res.end('Not Found');
       }
     }
   } else if (req.method === 'PUT') {
@@ -73,7 +73,7 @@ const server = http.createServer(async (req, res) => {
       res.end('OK');
     } catch (err) {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('(Not Found');
+      res.end('Not Found');
     }
   } else {
     res.writeHead(405, { 'Content-Type': 'text/plain' });
